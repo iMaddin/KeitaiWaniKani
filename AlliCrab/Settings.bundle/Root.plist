@@ -12,7 +12,7 @@
 			<key>Title</key>
 			<string>API Key</string>
 			<key>Key</key>
-			<string>apiKey</string>
+			<string>apiKeyV2</string>
 			<key>AutocapitalizationType</key>
 			<string>None</string>
 			<key>AutocorrectionType</key>
@@ -36,10 +36,20 @@
 		</dict>
         <dict>
             <key>Type</key>
-            <string>PSGroupSpecifier</string>
+            <string>PSToggleSwitchSpecifier</string>
             <key>Title</key>
-            <string></string>
+            <string>Purge Cache Files</string>
+            <key>Key</key>
+            <string>purgeCaches</string>
+            <key>DefaultValue</key>
+            <false/>
         </dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string></string>
+		</dict>
 		<dict>
 			<key>Type</key>
 			<string>PSChildPaneSpecifier</string>

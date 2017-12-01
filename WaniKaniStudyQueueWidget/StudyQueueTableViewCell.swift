@@ -1,8 +1,8 @@
 //
 //  StudyQueueTableViewCell.swift
-//  AlliCrab
+//  WaniKaniStudyQueueWidget
 //
-//  Copyright © 2015 Chris Laverty. All rights reserved.
+//  Copyright © 2017 Chris Laverty. All rights reserved.
 //
 
 import UIKit
@@ -17,7 +17,7 @@ class StudyQueueTableViewCell: UITableViewCell {
         formatter.allowedUnits = [.year, .month, .weekOfMonth, .day, .hour, .minute]
         formatter.maximumUnitCount = 1
         formatter.unitsStyle = .abbreviated
-        formatter.zeroFormattingBehavior = [.dropLeading, .dropTrailing]
+        formatter.zeroFormattingBehavior = .dropAll
         
         return formatter
     }()
@@ -41,15 +41,13 @@ class StudyQueueTableViewCell: UITableViewCell {
             return
         }
         
-        switch studyQueue.formattedTimeToNextReview(type(of: self).timeToNextReviewFormatter) {
+        switch studyQueue.nextReviewTime {
         case .none:
             timeToNextReviewLabel?.text = "–"
         case .now:
             timeToNextReviewLabel?.text = "Now"
-        case .formattedString(let formattedInterval):
-            timeToNextReviewLabel?.text = formattedInterval
-        case .unformattedInterval(let secondsUntilNextReview):
-            timeToNextReviewLabel?.text = "\(NumberFormatter.localizedString(from: NSNumber(value: secondsUntilNextReview), number: .decimal))s"
+        case let .date(date):
+            timeToNextReviewLabel?.text = type(of: self).timeToNextReviewFormatter.string(from: date.timeIntervalSinceNow, roundingUpwardToNearest: .oneMinute) ?? "???"
         }
         
         if studyQueue.reviewsAvailable > 0 {
@@ -68,12 +66,7 @@ class StudyQueueTableViewCell: UITableViewCell {
         associatedNameLabel?.text = nil
         associatedValueLabel?.text = nil
         
-        if #available(iOSApplicationExtension 9.0, *) {
-            timeToNextReviewLabel.font = UIFont.preferredFont(forTextStyle: .title1)
-            associatedValueLabel.font = UIFont.preferredFont(forTextStyle: .title1)
-        } else {
-            timeToNextReviewLabel.font = UIFont.systemFont(ofSize: 35, weight: UIFontWeightThin)
-            associatedValueLabel.font = UIFont.systemFont(ofSize: 35, weight: UIFontWeightThin)
-        }
+        timeToNextReviewLabel.font = UIFont.preferredFont(forTextStyle: .title1)
+        associatedValueLabel.font = UIFont.preferredFont(forTextStyle: .title1)
     }
 }
