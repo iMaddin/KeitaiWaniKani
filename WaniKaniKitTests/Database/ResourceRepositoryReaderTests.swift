@@ -73,7 +73,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
     func testStudyQueue_PendingLessonsReviews_NoFutureReviews() {
         populateDatabaseForStudyQueue(lessonCount: 10, pendingReviewCount: 23, futureReviewCount: 0)
         
-        let expected = StudyQueue(lessonsAvailable: 10, reviewsAvailable: 23, nextReviewDate: Date(), reviewsAvailableNextHour: 0, reviewsAvailableNextDay: 0)
+        let expected = StudyQueue(lessonsAvailable: 10, reviewsAvailable: 23, nextReviewDate: nil, reviewsAvailableNextHour: 0, reviewsAvailableNextDay: 0)
         
         XCTAssertEqual(try resourceRepository.studyQueue(), expected)
     }
@@ -353,7 +353,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
     }
     
     func testLevelTimeline_Load() {
-        var levelInfos = [LevelInfo]()
+        var levelProgressions = [LevelProgression]()
         
         let calendar = Calendar.current
         let components = calendar.dateComponents(in: utcTimeZone,
@@ -381,7 +381,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
             }
             
             let endDate = startDate + .oneDay * 14
-            levelInfos.append(LevelInfo(level: level, startDate: startDate, endDate: endDate))
+            levelProgressions.append(LevelProgression(level: level, createdAt: startDate, unlockedAt: startDate, startedAt: startDate, passedAt: endDate, completedAt: nil, abandonedAt: nil))
             startDate = endDate
         }
         
@@ -405,7 +405,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
         }
         let lastKanjiAssignmentId = nextAssignmentID
         
-        levelInfos.append(LevelInfo(level: testUserLevel, startDate: startDate, endDate: nil))
+        levelProgressions.append(LevelProgression(level: testUserLevel, createdAt: startDate, unlockedAt: startDate, startedAt: startDate, passedAt: nil, completedAt: nil, abandonedAt: nil))
         
         NSLog("Writing \(resourceItems.count) resources")
         writeToDatabase(resourceItems)
@@ -413,7 +413,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
         let minimumGuruTime = 4 * .oneHour + 8 * .oneHour + .oneDay - .oneHour + 2 * .oneDay - .oneHour
         let projectedLevelInfo = ProjectedLevelInfo(level: testUserLevel, startDate: startDate, endDate: kanjiStart + minimumGuruTime, isEndDateBasedOnLockedItem: false)
         
-        let expected = LevelData(detail: levelInfos, projectedCurrentLevel: projectedLevelInfo)
+        let expected = LevelData(detail: levelProgressions, projectedCurrentLevel: projectedLevelInfo)
         
         do {
             let levelTimeline = try resourceRepository.levelTimeline()
@@ -445,15 +445,15 @@ class ResourceRepositoryReaderTests: XCTestCase {
     }
     
     func testSubjectSearch() {
-        let leafRadical = createTestRadical(level: 1, character: nil, meanings: [Meaning(meaning: "leaf", isPrimary: true)])
-        let finsRadical = createTestRadical(level: 1, character: "ハ", meanings: [Meaning(meaning: "fins", isPrimary: true)])
-        let mountainKanji = createTestKanji(level: 1, character: "山",
+        let leafRadical = createTestRadical(level: 1, characters: nil, meanings: [Meaning(meaning: "leaf", isPrimary: true)])
+        let finsRadical = createTestRadical(level: 1, characters: "ハ", meanings: [Meaning(meaning: "fins", isPrimary: true)])
+        let mountainKanji = createTestKanji(level: 1, characters: "山",
                                             meanings: [Meaning(meaning: "Mountain", isPrimary: true)],
                                             readings: [Reading(type: "onyomi", reading: "さん", isPrimary: true), Reading(type: "kunyomi", reading: "やま", isPrimary: false)])
-        let mouthKanji = createTestKanji(level: 1, character: "口",
+        let mouthKanji = createTestKanji(level: 1, characters: "口",
                                          meanings: [Meaning(meaning: "Mouth", isPrimary: true)],
                                          readings: [Reading(type: "onyomi", reading: "こう", isPrimary: true), Reading(type: "onyomi", reading: "く", isPrimary: true), Reading(type: "kunyomi", reading: "くち", isPrimary: false)])
-        let industryKanji = createTestKanji(level: 1, character: "工",
+        let industryKanji = createTestKanji(level: 1, characters: "工",
                                             meanings: [Meaning(meaning: "Construction", isPrimary: true), Meaning(meaning: "Industry", isPrimary: false)],
                                             readings: [Reading(type: "onyomi", reading: "こう", isPrimary: true), Reading(type: "onyomi", reading: "く", isPrimary: true)])
         let mountainVocab = createTestVocabulary(level: 1, characters: "山",
@@ -471,15 +471,14 @@ class ResourceRepositoryReaderTests: XCTestCase {
         XCTAssertEqual(try resourceRepository.findSubjects(matching: "leaf"), [leafRadical])
         XCTAssertEqual(try resourceRepository.findSubjects(matching: "fins"), [finsRadical])
         XCTAssertEqual(try resourceRepository.findSubjects(matching: "やま"), [mountainVocab, mountainKanji])
-        XCTAssertEqual(try resourceRepository.findSubjects(matching: "く"), [mouthKanji, industryKanji])
-        XCTAssertEqual(try resourceRepository.findSubjects(matching: "く*"), [mouthVocab, mouthKanji, industryKanji])
+        XCTAssertEqual(try resourceRepository.findSubjects(matching: "く"), [mouthVocab, mouthKanji, industryKanji])
         XCTAssertEqual(try resourceRepository.findSubjects(matching: "mouth"), [mouthVocab, mouthKanji])
         XCTAssertEqual(try resourceRepository.findSubjects(matching: "口"), [mouthVocab, mouthKanji])
-        XCTAssertEqual(try resourceRepository.findSubjects(matching: "mount*"), [mountainVocab, mountainKanji, mountFujiVocab])
+        XCTAssertEqual(try resourceRepository.findSubjects(matching: "mount"), [mountainVocab, mountainKanji, mountFujiVocab])
     }
     
     private func createTestUser() {
-        let user = UserInformation(username: "Test", level: testUserLevel, startedAt: Date(), isSubscribed: true, profileURL: nil, currentVacationStartedAt: nil)
+        let user = UserInformation(username: "Test", level: testUserLevel, maxLevelGrantedBySubscription: 60, startedAt: Date(), isSubscribed: true, profileURL: nil, currentVacationStartedAt: nil)
         
         databaseManager.databaseQueue!.inTransaction { (database, rollback) in
             do {
@@ -514,7 +513,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
         return item
     }
     
-    private func createTestRadical(level: Int, character: String? = nil, meanings: [Meaning] = []) -> ResourceCollectionItem {
+    private func createTestRadical(level: Int, characters: String? = nil, meanings: [Meaning] = []) -> ResourceCollectionItem {
         let item = ResourceCollectionItem(id: nextSubjectID,
                                           type: .radical,
                                           url: URL(string: "https://www.wanikani.com/api/v2/subjects/\(nextSubjectID)")!,
@@ -522,7 +521,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
                                           data: Radical(level: level,
                                                         createdAt: Date(timeIntervalSinceReferenceDate: 0),
                                                         slug: "slug",
-                                                        character: character,
+                                                        characters: characters,
                                                         characterImages: [],
                                                         meanings: meanings,
                                                         documentURL: URL(string: "https://www.wanikani.com/radicals/slug")!))
@@ -530,7 +529,7 @@ class ResourceRepositoryReaderTests: XCTestCase {
         return item
     }
     
-    private func createTestKanji(level: Int, character: String = "", meanings: [Meaning] = [], readings: [Reading] = []) -> ResourceCollectionItem {
+    private func createTestKanji(level: Int, characters: String = "", meanings: [Meaning] = [], readings: [Reading] = []) -> ResourceCollectionItem {
         let item = ResourceCollectionItem(id: nextSubjectID,
                                           type: .kanji,
                                           url: URL(string: "https://www.wanikani.com/api/v2/subjects/\(nextSubjectID)")!,
@@ -538,11 +537,11 @@ class ResourceRepositoryReaderTests: XCTestCase {
                                           data: Kanji(level: level,
                                                       createdAt: Date(timeIntervalSinceReferenceDate: 0),
                                                       slug: "slug",
-                                                      character: character,
+                                                      characters: characters,
                                                       meanings: meanings,
                                                       readings: readings,
                                                       componentSubjectIDs: [],
-                                                      documentURL: URL(string: "https://www.wanikani.com/kanji/\(character.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!)")!))
+                                                      documentURL: URL(string: "https://www.wanikani.com/kanji/\(characters.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!)")!))
         nextSubjectID += 1
         return item
     }

@@ -5,7 +5,7 @@
 //  Copyright © 2017 Chris Laverty. All rights reserved.
 //
 
-public struct LevelProgression: ResourceCollectionItemData {
+public struct LevelProgression: ResourceCollectionItemData, Equatable {
     public let level: Int
     public let createdAt: Date
     public let unlockedAt: Date?
@@ -13,6 +13,11 @@ public struct LevelProgression: ResourceCollectionItemData {
     public let passedAt: Date?
     public let completedAt: Date?
     public let abandonedAt: Date?
+    
+    public var duration: TimeInterval? {
+        guard let unlockedAt = unlockedAt, let passedAt = passedAt else { return nil }
+        return passedAt.timeIntervalSince(unlockedAt)
+    }
     
     private enum CodingKeys: String, CodingKey {
         case level
@@ -22,17 +27,5 @@ public struct LevelProgression: ResourceCollectionItemData {
         case passedAt = "passed_at"
         case completedAt = "completed_at"
         case abandonedAt = "abandoned_at"
-    }
-}
-
-extension LevelProgression: Equatable {
-    public static func ==(lhs: LevelProgression, rhs: LevelProgression) -> Bool {
-        return lhs.level == rhs.level
-            && lhs.createdAt == rhs.createdAt
-            && lhs.unlockedAt == rhs.unlockedAt
-            && lhs.startedAt == rhs.startedAt
-            && lhs.passedAt == rhs.passedAt
-            && lhs.completedAt == rhs.completedAt
-            && lhs.abandonedAt == rhs.abandonedAt
     }
 }

@@ -6,19 +6,19 @@
 //
 
 public struct LevelData: Equatable {
-    public let detail: [LevelInfo]
+    public let detail: [LevelProgression]
     public let projectedCurrentLevel: ProjectedLevelInfo?
     public let stats: LevelStats?
     
-    public init(detail: [LevelInfo], projectedCurrentLevel: ProjectedLevelInfo?) {
+    public init(detail: [LevelProgression], projectedCurrentLevel: ProjectedLevelInfo?) {
         self.detail = detail
         self.projectedCurrentLevel = projectedCurrentLevel
         self.stats = type(of: self).calculateAverageLevelDuration(detail)
     }
     
     /// Calculate the bounded mean, ignoring durations in the upper and lower quartiles
-    private static func calculateAverageLevelDuration(_ detail: [LevelInfo]) -> LevelStats? {
-        let durations = detail.lazy.flatMap { $0.duration }.sorted()
+    private static func calculateAverageLevelDuration(_ detail: [LevelProgression]) -> LevelStats? {
+        let durations = detail.lazy.compactMap({ $0.duration }).sorted()
         let boundedDurations = durations.interquartileSubSequence()
         guard !boundedDurations.isEmpty else { return nil }
         
@@ -27,14 +27,6 @@ public struct LevelData: Equatable {
         let mean = boundedDurations.reduce(0.0, +) / Double(boundedDurations.count)
         
         return LevelStats(mean: mean, lowerQuartile: lowerQuartile, upperQuartile: upperQuartile)
-    }
-}
-
-extension LevelData {
-    public static func ==(lhs: LevelData, rhs: LevelData) -> Bool {
-        return lhs.detail == rhs.detail
-            && lhs.projectedCurrentLevel == rhs.projectedCurrentLevel
-            && lhs.stats == rhs.stats
     }
 }
 
@@ -50,38 +42,6 @@ public struct LevelStats: Equatable {
     }
 }
 
-extension LevelStats {
-    public static func ==(lhs: LevelStats, rhs: LevelStats) -> Bool {
-        return lhs.mean == rhs.mean
-            && lhs.lowerQuartile == rhs.lowerQuartile
-            && lhs.upperQuartile == rhs.upperQuartile
-    }
-}
-
-public struct LevelInfo: Equatable {
-    public let level: Int
-    public let startDate: Date
-    public let endDate: Date?
-    
-    public var duration: TimeInterval? {
-        return endDate?.timeIntervalSince(startDate)
-    }
-    
-    public init(level: Int, startDate: Date, endDate: Date?) {
-        self.level = level
-        self.startDate = startDate
-        self.endDate = endDate
-    }
-}
-
-extension LevelInfo {
-    public static func ==(lhs: LevelInfo, rhs: LevelInfo) -> Bool {
-        return lhs.level == rhs.level
-            && lhs.startDate == rhs.startDate
-            && lhs.endDate == rhs.endDate
-    }
-}
-
 public struct ProjectedLevelInfo: Equatable {
     public let level: Int
     public let startDate: Date
@@ -93,15 +53,6 @@ public struct ProjectedLevelInfo: Equatable {
         self.startDate = startDate
         self.endDate = endDate
         self.isEndDateBasedOnLockedItem = isEndDateBasedOnLockedItem
-    }
-}
-
-extension ProjectedLevelInfo {
-    public static func ==(lhs: ProjectedLevelInfo, rhs: ProjectedLevelInfo) -> Bool {
-        return lhs.level == rhs.level
-            && lhs.startDate == rhs.startDate
-            && lhs.endDate == rhs.endDate
-            && lhs.isEndDateBasedOnLockedItem == rhs.isEndDateBasedOnLockedItem
     }
 }
 
